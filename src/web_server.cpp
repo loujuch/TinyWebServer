@@ -28,8 +28,12 @@ web::WebServer::WebServer(int argc, char *argv[], uint32_t max_conn,
 		port_ = atoi(argv[1]);
 		assert(port_ > 0);
 	}
+	if(argc > 2) {
+		HttpFileSender::set_web_root(argv[2]);
+	} else {
+		HttpFileSender::set_web_root(web_root);
+	}
 	accepter_.reset(new Accepter(port_));
-	HttpFileSender::set_web_root(web_root);
 }
 
 web::WebServer::~WebServer() {
