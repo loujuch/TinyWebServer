@@ -10,6 +10,7 @@ set(CMAKE_BUILD_TYPE Debug)
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 
+set(Target WebServer)
 
 aux_source_directory(${PROJECT_SOURCE_DIR}/src SRCS)
 
@@ -20,6 +21,6 @@ include_directories(${PROJECT_SOURCE_DIR}/dependent_libraries/event/include)
 add_subdirectory(${PROJECT_SOURCE_DIR}/dependent_libraries/log)
 add_subdirectory(${PROJECT_SOURCE_DIR}/dependent_libraries/event)
 
-add_executable(TinyWebServer ${SRCS})
+add_executable(${Target} ${SRCS})
 
-target_link_libraries(TinyWebServer log event pthread )
+target_link_libraries(${Target} log event pthread )

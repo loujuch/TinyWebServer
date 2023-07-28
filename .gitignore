@@ -3,5 +3,4 @@ test/
 web_root/
 bin/
 obj/
-log/
 build/
