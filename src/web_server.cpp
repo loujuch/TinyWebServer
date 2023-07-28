@@ -63,15 +63,12 @@ int web::WebServer::run() {
 	run_ = true;
 	accepter_->event_loop()->setSignal(SIGPIPE, []() {
 		logger::log_error << "SIGPIPE: response";
-		std::cout << "SIGPIPE: response" << std::endl;
 		});
 	accepter_->event_loop()->setSignal(SIGHUP, []() {
 		logger::log_error << "SIGHUP: response";
-		std::cout << "SIGHUP: response" << std::endl;
 		});
 	accepter_->event_loop()->setSignal(SIGURG, []() {
 		logger::log_error << "SIGURG: response";
-		std::cout << "SIGURG: response" << std::endl;
 		});
 	std::cout << "WebServer will run in port " << port_ << std::endl;
 	AcceptCallback accept_callback =
