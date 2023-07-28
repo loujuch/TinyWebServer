@@ -24,7 +24,7 @@ class SignalEvent {
 	static void call_sig(int sig);
 	void exec();
 public:
-	SignalEvent(EventLoop *event_loop, int signo);
+	explicit SignalEvent(EventLoop *event_loop, int signo);
 	~SignalEvent();
 
 	inline SignalCallback setCallback(SignalCallback callback) {

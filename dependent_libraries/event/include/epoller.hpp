@@ -8,7 +8,7 @@ namespace ev {
 class Epoller :public Poller {
 	int epoll_fd_;
 public:
-	Epoller(EventLoop *event_loop);
+	explicit Epoller(EventLoop *event_loop);
 	~Epoller();
 
 	int wait(ChannelLists channel_list, int timeout);

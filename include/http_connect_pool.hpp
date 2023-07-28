@@ -16,18 +16,20 @@ namespace web {
 
 class HttpConnect;
 class WebServer;
+class SocketConnect;
 
 // 一个服务器中只包含一个，用于分发连接事件
 class HttpConnectPool {
+	static constexpr uint16_t timeout = 1000 * 30;
 	int now;
 	std::vector<std::unique_ptr<ev::EventLoopThread>> event_loop_thread_set_;
 	std::vector<ev::EventLoop *> event_loop_set_;
 public:
-	HttpConnectPool(uint32_t connect_number);
+	explicit HttpConnectPool(uint32_t connect_number);
 	~HttpConnectPool();
 
 	// 仅被用于Accepter中，因此实际上不涉及多线程调用，无需保证线程安全
-	void add_connect(int new_sock, const sockaddr_in &new_addr, WebServer *web);
+	void add_connect(SocketConnect &&new_sock, const sockaddr_in &new_addr, WebServer *web);
 
 	HttpConnectPool(const HttpConnectPool &) = delete;
 	HttpConnectPool &operator=(const HttpConnectPool &) = delete;

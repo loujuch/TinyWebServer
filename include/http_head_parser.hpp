@@ -19,7 +19,7 @@ class HttpHeadParser {
 
 	void commit(const char *buffer, int len);
 public:
-	HttpHeadParser();
+	explicit HttpHeadParser();
 
 	bool parser(const char *buffer, int size);
 

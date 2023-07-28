@@ -16,7 +16,7 @@ class LogInterface {
 	// 将格式化数据提交到处理程序
 	void commit();
 public:
-	LogInterface(const char *file, const char *func, const int line, const LogLevel level);
+	explicit LogInterface(const char *file, const char *func, const int line, const LogLevel level);
 	~LogInterface();
 
 	inline LogFormatter stream() {

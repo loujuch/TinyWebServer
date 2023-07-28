@@ -44,7 +44,10 @@ ev::EventLoop::~EventLoop() {
 }
 
 void ev::EventLoop::setChannel(Channel *channel) {
-	assert(channel->event() != EV_POOLER_NONE);
+	if(channel->event() == EV_POOLER_NONE) {
+		logger::log_warn << "event_loop " << this
+			<< " set channel " << channel << " not event";
+	}
 	channel_mutex_.lock();
 	if(channel_set_.count(channel) == 0) {
 		logger::log_info << "Channel " << channel << " set";

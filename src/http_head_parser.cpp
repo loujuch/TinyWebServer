@@ -1,10 +1,14 @@
 #include "http_head_parser.hpp"
 
-#include <assert.h>
+#include "log.hpp"
+
 #include <iostream>
 
 static int get_line(const char *buffer, int len, int start) {
-	assert(len >= 0 && buffer != nullptr);
+	if(len <= 0 || start < 0 || buffer == nullptr) {
+		logger::log_warn << "buffer " << buffer << " length " << len << " start " << start;
+		return -1;
+	}
 	int s, status = 0;
 	for(s = start;s < len;++s) {
 		char c = buffer[s];
@@ -26,7 +30,10 @@ web::HttpHeadParser::HttpHeadParser() :
 }
 
 void web::HttpHeadParser::commit(const char *buffer, int len) {
-	assert(buffer != nullptr && len >= 2);
+	if(len < 2 || buffer == nullptr) {
+		logger::log_warn << "buffer " << buffer << " length " << len;
+		return;
+	}
 	if(buffer[len - 2] != '\r' || buffer[len - 1] != '\n') {
 		return;
 	}
@@ -130,7 +137,10 @@ void web::HttpHeadParser::commit(const char *buffer, int len) {
 }
 
 bool web::HttpHeadParser::parser(const char *buffer, int size) {
-	assert(buffer != nullptr && size > 0);
+	if(size <= 0 || buffer == nullptr) {
+		logger::log_warn << "buffer " << buffer << " size " << size;
+		return error_;
+	}
 	if(error_) {
 		return true;
 	}

@@ -25,7 +25,7 @@ class TimerSet {
 
 	void exec();
 public:
-	TimerSet(EventLoop *event_loop);
+	explicit TimerSet(EventLoop *event_loop);
 	~TimerSet();
 
 	TimerId addTimer(const TimerStamp &when, uint64_t interval, TimerCallback timer_callback);

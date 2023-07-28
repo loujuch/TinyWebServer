@@ -17,7 +17,7 @@ protected:
 	ChannelMap channel_map_;
 	EventLoop *owner_event_loop_;
 public:
-	Poller(EventLoop *event_loop);
+	explicit Poller(EventLoop *event_loop);
 	virtual ~Poller();
 
 	virtual int wait(ChannelLists channel_list, int timeout) = 0;

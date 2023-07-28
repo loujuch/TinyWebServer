@@ -5,7 +5,6 @@
 #include "log_config.hpp"
 #include "log_file.hpp"
 
-#include <assert.h>
 
 std::atomic<bool> logger::LogCore::running_(false);
 
@@ -14,11 +13,11 @@ logger::LogCore::LogCore() :
 	write_status_(WriteThreadStatus::WAIT_CREATE),
 	is_empty(true),
 	write_thread_(std::bind(&LogCore::func, this)) {
-	assert(pthread_rwlock_init(&core_mutex_, nullptr) == 0);
+	::pthread_rwlock_init(&core_mutex_, nullptr);
 }
 
 logger::LogCore::~LogCore() {
-	pthread_rwlock_destroy(&core_mutex_);
+	::pthread_rwlock_destroy(&core_mutex_);
 }
 
 void logger::LogCore::append(const std::string &s) {
@@ -26,7 +25,7 @@ void logger::LogCore::append(const std::string &s) {
 		return;
 	}
 	bool is;
-	pthread_rwlock_rdlock(&core_mutex_);
+	::pthread_rwlock_rdlock(&core_mutex_);
 	is = buffer_.append(s);
 	is_empty = false;
 	pthread_rwlock_unlock(&core_mutex_);
@@ -48,7 +47,7 @@ void logger::LogCore::switch_buffer(LogBufferList &buf) {
 	tmp_mutex.unlock();
 	if(run_) {
 		write_status_ = WriteThreadStatus::WAIT_DATA;
-		pthread_rwlock_wrlock(&core_mutex_);
+		::pthread_rwlock_wrlock(&core_mutex_);
 		swap(buf, buffer_);
 		is_empty = true;
 		pthread_rwlock_unlock(&core_mutex_);

@@ -9,7 +9,7 @@ class LogFormatter {
 	LogLevel level_;
 	std::string &format_str_;
 public:
-	LogFormatter(std::string &s, LogLevel level);
+	explicit LogFormatter(std::string &s, LogLevel level);
 
 	LogFormatter &operator<<(const bool t);
 	LogFormatter &operator<<(const LogLevel level);

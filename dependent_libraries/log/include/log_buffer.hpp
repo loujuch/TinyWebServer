@@ -16,12 +16,7 @@ private:
 	unsigned size_;
 	std::shared_ptr<LogBuffer> next_;
 public:
-	LogBuffer();
-
-	// void show() {
-	// 	buffer_[size_ - (size_ == log_buffer_size)] = '\0';
-	// 	std::cout << buffer_;
-	// }
+	explicit LogBuffer();
 
 	inline char *assign(const std::string &s) {
 		if(free_size() < s.size()) {

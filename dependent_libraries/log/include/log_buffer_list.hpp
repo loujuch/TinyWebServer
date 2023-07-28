@@ -17,7 +17,7 @@ class LogBufferList {
 		back_ = back_->next();
 	}
 public:
-	LogBufferList();
+	explicit LogBufferList();
 
 	bool append(const std::string &s);
 

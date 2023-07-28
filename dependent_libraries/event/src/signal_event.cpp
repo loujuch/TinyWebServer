@@ -8,7 +8,6 @@
 #include <sys/signalfd.h>
 #include <assert.h>
 #include <unistd.h>
-#include <assert.h>
 #include <sys/eventfd.h>
 
 std::vector<ev::SignalEvent *> ev::SignalEvent::signal_event_(SIGRTMAX + 1, nullptr);
@@ -40,7 +39,7 @@ void ev::SignalEvent::call_sig(int sig) {
 	eventfd_write(signal_event_[sig]->event_fd_, 1);
 }
 
-void set_signal_call(int signo, __sighandler_t handler) {
+static void set_signal_call(int signo, __sighandler_t handler) {
 	struct sigaction act;
 	act.sa_handler = handler;
 	sigemptyset(&act.sa_mask);
@@ -54,19 +53,38 @@ void set_signal_call(int signo, __sighandler_t handler) {
 		act.sa_flags |= SA_RESTART;
 #endif
 	}
-	assert(sigaction(signo, &act, nullptr) >= 0);
+	int res = sigaction(signo, &act, nullptr);
+	if(res < 0) {
+		logger::log_error << "set signo " << signo << " error: " << strerror(errno);
+	}
+	assert(res >= 0);
 }
 
 ev::SignalEvent::SignalEvent(EventLoop *event_loop, int signo) :
 	signo_(signo),
-	event_fd_(eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)),
+	event_fd_(-1),
 	own_event_loop_(event_loop),
 	event_channel_(nullptr),
 	callback_(std::bind(SIG_DFL, signo_)) {
 	logger::log_trace << "try set signo: " << signo << " event";
-	assert(own_event_loop_ != nullptr);
-	assert(event_fd_ >= 0);
-	assert(signo_ >= 0 && signo <= SIGRTMAX);
+	if(own_event_loop_ == nullptr) {
+		logger::log_fatal << "signal event " << this << " with signo " << signo_
+			<< " event_loop is nullptr";
+		return;
+	}
+	if(signo_<0 || signo_>SIGRTMAX) {
+		logger::log_fatal << "signal event " << this << " with signo " << signo_
+			<< " in event_loop " << own_event_loop_ << " signo" << signo_ << "is error"
+			<< strerror(errno);
+		return;
+	}
+	event_fd_ = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+	if(event_fd_ < 0) {
+		logger::log_fatal << "signal event " << this << " with signo " << signo_
+			<< " in event_loop " << own_event_loop_ << " event_fd open error"
+			<< strerror(errno);
+		return;
+	}
 	logger::log_trace << "signo " << signo_ << " eventfd " << event_fd_ << " create";
 	event_channel_.reset(new Channel(own_event_loop_, event_fd_));
 	event_channel_->setReadCallback(std::bind(&SignalEvent::exec, this));

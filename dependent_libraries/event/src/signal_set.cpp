@@ -3,13 +3,14 @@
 #include "signal_event.hpp"
 #include "log.hpp"
 
-#include <assert.h>
-
 std::vector<std::unique_ptr<ev::SignalEvent>> ev::SignalSet::signal_set_(SIGRTMAX + 1);
 
 ev::SignalSet::SignalSet(EventLoop *event_loop) :
 	own_event_loop_(event_loop) {
-	assert(own_event_loop_ != nullptr);
+	if(own_event_loop_ == nullptr) {
+		logger::log_fatal << "signal set " << this << " event_loop is nullptr";
+		return;
+	}
 	sigemptyset(&loop_set_);
 }
 
@@ -30,7 +31,9 @@ ev::SignalCallback ev::SignalSet::setSignal(int signo, SignalCallback signal_cal
 		logger::log_trace << "signo: " << signo << " reset";
 		return p;
 	}
-	assert(signal_set_[signo] == nullptr);
+	if(signal_set_[signo] != nullptr) {
+		logger::log_warn << "signal_set " << this << " set signo " << signo << " has callback";
+	}
 	sigaddset(&loop_set_, signo);
 	signal_set_[signo].reset(new SignalEvent(own_event_loop_, signo));
 	signal_mutex_.unlock();

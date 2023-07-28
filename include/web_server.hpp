@@ -25,9 +25,9 @@ class WebServer {
 
 	void accept_callback(int sock, const sockaddr_in &addr);
 public:
-	WebServer(int argc, char *argv[], uint32_t max_conn,
-		const std::string &web_root = "./web_root",
-		const logger::LogLevel level = logger::LOG_ALL);
+	explicit WebServer(uint16_t port, uint32_t max_conn,
+		const std::string &web_root, const std::string &server_name,
+		const logger::LogLevel level);
 	~WebServer();
 
 	int run();

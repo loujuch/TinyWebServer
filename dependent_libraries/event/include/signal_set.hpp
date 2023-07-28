@@ -24,7 +24,7 @@ class SignalSet {
 
 	void exec();
 public:
-	SignalSet(EventLoop *event_loop);
+	explicit SignalSet(EventLoop *event_loop);
 	~SignalSet();
 
 	SignalCallback setSignal(int signo, SignalCallback signal_callback);

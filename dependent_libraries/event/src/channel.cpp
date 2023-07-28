@@ -3,7 +3,6 @@
 #include "event_loop.hpp"
 #include "log.hpp"
 
-#include <assert.h>
 #include <string.h>
 
 ev::Channel::Channel(EventLoop *event_loop, int fd) :
@@ -12,8 +11,15 @@ ev::Channel::Channel(EventLoop *event_loop, int fd) :
 	events_(EV_POOLER_NONE),
 	revents_(EV_POOLER_NONE),
 	owner_event_loop_(event_loop) {
-	assert(owner_event_loop_ != nullptr);
-	assert(fd_ >= 0);
+	if(owner_event_loop_ == nullptr) {
+		logger::log_fatal << "channel " << this << " event_loop is nullptr";
+		return;
+	}
+	if(fd_ < 0) {
+		logger::log_fatal << "channel " << this << " event_loop "
+			<< owner_event_loop_ << " fd is not exist";
+		return;
+	}
 	logger::log_info << "channel " << this << " fd = " << fd_ << ": create";
 }
 

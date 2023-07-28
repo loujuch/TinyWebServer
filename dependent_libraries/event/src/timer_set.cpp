@@ -41,13 +41,23 @@ static uint64_t read_timerfd(int timer_fd) {
 }
 
 ev::TimerSet::TimerSet(EventLoop *event_loop) :
-	timer_fd_(timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC)),
+	timer_fd_(-1),
 	owner_event_loop_(event_loop),
 	timer_channel_(nullptr),
 	timer_heap_(new TimerHeap) {
-	assert(timer_fd_ >= 0);
-	assert(owner_event_loop_ != nullptr);
-	assert(timer_heap_ != nullptr);
+	timer_fd_ = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
+	if(timer_fd_ < 0) {
+		logger::log_fatal << "timer_set " << this << " create fail " << strerror(errno);
+		return;
+	}
+	if(owner_event_loop_ == nullptr) {
+		logger::log_fatal << "timer_set " << this << " event_loop is nullptr";
+		return;
+	}
+	if(timer_heap_ == nullptr) {
+		logger::log_fatal << "timer_set " << this << " timer_heap_ is nullptr";
+		return;
+	}
 	logger::log_info << "timer fd " << timer_fd_ << " create";
 	::timerfd_settime(timer_fd_, TFD_TIMER_ABSTIME, nullptr, nullptr);
 	timer_channel_.reset(new Channel(owner_event_loop_, timer_fd_));

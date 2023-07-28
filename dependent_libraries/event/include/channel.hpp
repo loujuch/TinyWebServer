@@ -20,8 +20,8 @@ class Channel {
 	CloseCallback close_callback_;
 	DeleteCallback delete_callback_;
 public:
-	Channel(EventLoop *event_loop, int fd);
-	Channel(Channel &&channel);
+	explicit Channel(EventLoop *event_loop, int fd);
+	explicit Channel(Channel &&channel);
 	~Channel();
 
 	void exec();

@@ -15,7 +15,7 @@ bool logger::LogConfig::set_log_file_prefix(const std::string &log_program) {
 		return false;
 	}
 	std::string::size_type pos = log_program.rfind('/');
-	if(pos != std::string::npos) {
+	if(pos == std::string::npos) {
 		log_file_prefix_ = log_program;
 	} else {
 		log_file_prefix_ = log_program.substr(pos + 1);

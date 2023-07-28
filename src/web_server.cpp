@@ -6,6 +6,7 @@
 #include "http_connect_pool.hpp"
 #include "event_loop.hpp"
 #include "http_file_sender.hpp"
+#include "socket_connect.hpp"
 
 #include <netinet/in.h>
 #include <signal.h>
@@ -14,22 +15,19 @@
 #include <assert.h>
 #include <unistd.h>
 
-web::WebServer::WebServer(int argc, char *argv[], uint32_t max_conn,
-	const std::string &web_root, const logger::LogLevel level) :
+web::WebServer::WebServer(uint16_t port, uint32_t max_conn,
+	const std::string &web_root, const std::string &server_name,
+	const logger::LogLevel level) :
 	run_(false),
-	port_(80),
+	port_(port),
 	max_conn_(max_conn),
 	now_conn_(0),
 	accepter_(nullptr),
 	http_connect_pool_(4) {
 	logger::log_set_level(level);
-	logger::log_set_file_prefix(argv[0]);
-	if(argc > 1) {
-		port_ = atoi(argv[1]);
-		assert(port_ > 0);
-	}
-	if(argc > 2) {
-		HttpFileSender::set_web_root(argv[2]);
+	logger::log_set_file_prefix(server_name);
+	if(web_root.empty()) {
+		HttpFileSender::set_web_root("./web_root");
 	} else {
 		HttpFileSender::set_web_root(web_root);
 	}
@@ -41,18 +39,20 @@ web::WebServer::~WebServer() {
 }
 
 void web::WebServer::accept_callback(int sock, const sockaddr_in &addr) {
+	SocketConnect socket_conn(sock, this);
 	++now_conn_;
 	if(now_conn_ + 1 >= max_conn_) {
+		socket_conn.shut_read();
 		static const char server_busy[128] =
 			"HTTP/1.0 500 Internal Server Error\r\n"
 			"text/html\r\n\r\n"
 			"<HTML><TITLE>busy</TITLE><BODY><h1>Server is busy!</h1></BODY></HTML>";
 		static const int length = strlen(server_busy);
-		::write(sock, server_busy, length);
-		::close(sock);
-		--now_conn_;
+		socket_conn.send(server_busy, length);
+		socket_conn.shut_write();
+		socket_conn.close();
 	} else {
-		http_connect_pool_.add_connect(sock, addr, this);
+		http_connect_pool_.add_connect(std::move(socket_conn), addr, this);
 	}
 }
 

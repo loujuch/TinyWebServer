@@ -53,6 +53,10 @@ ev::pooler_event_t epoll_to_poller(uint32_t event) {
 ev::Epoller::Epoller(EventLoop *event_loop) :
 	Poller(event_loop),
 	epoll_fd_(epoll_create1(EPOLL_CLOEXEC)) {
+	if(epoll_fd_ < 0) {
+		logger::log_fatal << "epoll_fd create fail";
+		return;
+	}
 	assert(epoll_fd_ >= 0);
 	logger::log_info << "epoll fd = " << epoll_fd_ << " create";
 }
@@ -83,7 +87,15 @@ int ev::Epoller::wait(ChannelLists channel_list, int timeout) {
 }
 
 void ev::Epoller::setChannel(Channel *channel) {
-	assert(channel->event_loop() == owner_event_loop_);
+	if(channel->event_loop() != owner_event_loop_) {
+		logger::log_error << "epoller " << epoll_fd_ << " in event_loop " << owner_event_loop_
+			<< " set other event_loop " << channel->event_loop() << " channel " << channel;
+		return;
+	}
+	if(channel->event() == EV_POOLER_NONE) {
+		logger::log_warn << "epoller " << epoll_fd_ << " in event_loop " << owner_event_loop_
+			<< " set channel " << channel << " not event";
+	}
 	assert(channel->event() != EV_POOLER_NONE);
 	struct epoll_event event;
 	event.data.ptr = channel;
@@ -105,8 +117,16 @@ void ev::Epoller::setChannel(Channel *channel) {
 
 void ev::Epoller::delChannel(Channel *channel) {
 	logger::log_info << "epoll fd = " << epoll_fd_ << " try del channel fd = " << channel->fd();
-	assert(channel->event_loop() == owner_event_loop_);
-	assert(hasChannel(channel));
+	if(channel->event_loop() != owner_event_loop_) {
+		logger::log_error << "epoller " << epoll_fd_ << " in event_loop " << owner_event_loop_
+			<< " set other event_loop " << channel->event_loop() << " channel " << channel;
+		return;
+	}
+	if(!hasChannel(channel)) {
+		logger::log_error << "epoller " << epoll_fd_ << " in event_loop " << owner_event_loop_
+			<< " del channel " << channel << " is not in epoller";
+		return;
+	}
 	channel_map_.erase(channel->fd());
 	epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, channel->fd(), nullptr);
 	logger::log_info << "epoll fd = " << epoll_fd_ << " del channel fd = " << channel->fd();

@@ -17,7 +17,7 @@ class TimerHeap {
 
 	void from_to(int l, int r);
 public:
-	TimerHeap() = default;
+	explicit TimerHeap() = default;
 
 	bool push(std::shared_ptr<Timer> &timer);
 	TimerId emplace(const TimerStamp &when, uint64_t interval, TimerCallback timer_callback);

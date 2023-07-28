@@ -2,6 +2,8 @@
 
 #include <unordered_map>
 
+#include "log.hpp"
+
 #include <assert.h>
 #include <sys/sendfile.h>
 #include <sys/types.h>
@@ -17,7 +19,10 @@ web::HttpFileSender::HttpFileSender(const std::string &file_name) :
 	size_(0),
 	can_exec_(false),
 	exist_(false) {
-	assert(!file_name.empty());
+	if(file_name.empty()) {
+		logger::log_error << "file_name is empty";
+		return;
+	}
 	auto tmp = web_root_;
 	if(file_name[0] != '/') {
 		tmp.push_back('/');
@@ -51,7 +56,11 @@ web::HttpFileSender::~HttpFileSender() {
 }
 
 int web::HttpFileSender::send_file_to_network(int sock) {
-	assert(sock >= 0 && fd_ >= 0 && off_ < size_);
+	if(sock < 0 || fd_ < 0 || off_ >= size_) {
+		logger::log_warn << "socket " << sock << " fd "
+			<< fd_ << " off " << off_ << " size " << size_;
+		return -1;
+	}
 	int n = ::sendfile(sock, fd_, &off_, size_ - off_);
 	if(n == -1) {
 		if(errno != EINTR && errno != EAGAIN) {

@@ -1,4 +1,4 @@
-bin/*
-test/*
-obj/*
-lib/*
+bin/
+test/
+obj/
+lib/

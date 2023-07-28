@@ -16,7 +16,7 @@ class HttpFileSender {
 	bool can_exec_;
 	bool exist_;
 public:
-	HttpFileSender(const std::string &file_name);
+	explicit HttpFileSender(const std::string &file_name);
 	~HttpFileSender();
 
 	int send_file_to_network(int sock);

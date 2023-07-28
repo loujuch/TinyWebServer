@@ -1,6 +1,7 @@
 #include "http_connect.hpp"
 
 #include <vector>
+#include <iostream>
 
 #include "event_loop.hpp"
 #include "channel.hpp"
@@ -9,7 +10,6 @@
 #include "web_server.hpp"
 
 #include <unistd.h>
-#include <assert.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -31,20 +31,25 @@ static const std::string &get_response_head(int number) {
 	return head_str[0];
 }
 
-web::HttpConnect::HttpConnect(ev::EventLoop *loop, int sock,
+web::HttpConnect::HttpConnect(ev::EventLoop *loop, SocketConnect &&sock,
 	const sockaddr_in new_addr, WebServer *web) :
 	status(0),
 	close_(false),
-	conn_sockfd_(sock),
+	conn_sockfd_(std::move(sock)),
 	own_web_server_(web),
 	conn_channel_(nullptr),
 	conn_sender_(nullptr),
 	own_event_loop_(loop) {
-	assert(conn_sockfd_ >= 0);
-	assert(own_event_loop_ != nullptr);
+	if(conn_sockfd_.socket() < 0 || conn_sockfd_.is_close()) {
+		logger::log_error << "http_connent " << this << " sock " << conn_sockfd_.socket();
+		return;
+	}
+	if(own_event_loop_ == nullptr) {
+		logger::log_error << "http_connent " << this << " event_loop == nullptr";
+		return;
+	}
 	logger::log_info << "new http_connect " << this << " create";
-	conn_channel_.reset(new ev::Channel(own_event_loop_, conn_sockfd_));
-	assert(conn_channel_ != nullptr);
+	conn_channel_.reset(new ev::Channel(own_event_loop_, conn_sockfd_.socket()));
 	conn_channel_->setReadCallback(std::bind(&HttpConnect::conn_read, this));
 	conn_channel_->setCloseCallback(std::bind(&HttpConnect::conn_close, this));
 	conn_channel_->setErrorCallback(std::bind(&HttpConnect::conn_error, this));
@@ -63,29 +68,29 @@ web::HttpConnect::~HttpConnect() {
 	logger::log_info << "http_connect " << this << " close channel "
 		<< conn_channel_.get() << " from loop " << own_event_loop_;
 	conn_channel_->close();
-	logger::log_info << "http_connect " << this << " close sock " << conn_sockfd_;
-	::close(conn_sockfd_);
-	conn_sockfd_ = -1;
-	own_web_server_->close_conn();
+	logger::log_info << "http_connect " << this << " close sock " << conn_sockfd_.socket();
+	conn_sockfd_.close();
 }
 
 void web::HttpConnect::conn_read() {
 	own_event_loop_->closeTimer(timer_id_);
 	static constexpr int buffer_size = 1024 * 8;
 	char buffer[buffer_size];
-	int n = receive(buffer, sizeof(buffer));
+	int n = conn_sockfd_.recv(buffer, sizeof(buffer));
 	if(n < 0) {
 		return close();
 	} else if(n == 0) {
 		return;
 	}
+	buffer[n] = '\0';
+	// std::cout << buffer << std::endl;
 	if(head_parser_.error()) {
 		logger::log_warn << "html head error";
 		auto tmp = get_response_head(500) + "text/html\r\n\r\n";
-		::send(conn_sockfd_, tmp.c_str(), tmp.size(), 0);
+		conn_sockfd_.send(tmp.c_str(), tmp.size());
 		conn_sender_.reset(new HttpFileSender("/500.html"));
 		if(conn_sender_->exist()) {
-			conn_sender_->send_file_to_network(conn_sockfd_);
+			conn_sender_->send_file_to_network(conn_sockfd_.socket());
 		}
 		conn_sender_.reset();
 		return close();
@@ -95,10 +100,10 @@ void web::HttpConnect::conn_read() {
 	if(head_parser_.error()) {
 		logger::log_warn << "html head error";
 		auto tmp = get_response_head(500) + "text/html\r\n\r\n";
-		::send(conn_sockfd_, tmp.c_str(), tmp.size(), 0);
+		conn_sockfd_.send(tmp.c_str(), tmp.size());
 		conn_sender_.reset(new HttpFileSender("/500.html"));
 		if(conn_sender_->exist()) {
-			conn_sender_->send_file_to_network(conn_sockfd_);
+			conn_sender_->send_file_to_network(conn_sockfd_.socket());
 		}
 		conn_sender_.reset();
 		return close();
@@ -110,10 +115,10 @@ void web::HttpConnect::conn_read() {
 		conn_sender_.reset(new HttpFileSender(f));
 		if(!conn_sender_->exist()) {
 			auto tmp = get_response_head(404) + "text/html\r\n\r\n";
-			::send(conn_sockfd_, tmp.c_str(), tmp.size(), 0);
+			conn_sockfd_.send(tmp.c_str(), tmp.size());
 			conn_sender_.reset(new HttpFileSender("/404.html"));
 			if(conn_sender_->exist()) {
-				conn_sender_->send_file_to_network(conn_sockfd_);
+				conn_sender_->send_file_to_network(conn_sockfd_.socket());
 			}
 			return close();
 		} else {
@@ -122,8 +127,8 @@ void web::HttpConnect::conn_read() {
 				} else {
 					auto tmp = get_response_head(200) +
 						HttpFileSender::file_type(f) + "\r\n\r\n";
-					::send(conn_sockfd_, tmp.c_str(), tmp.size(), 0);
-					conn_sender_->send_file_to_network(conn_sockfd_);
+					conn_sockfd_.send(tmp.c_str(), tmp.size());
+					conn_sender_->send_file_to_network(conn_sockfd_.socket());
 					if(conn_sender_->finish()) {
 						return close();
 					} else {
@@ -140,9 +145,13 @@ void web::HttpConnect::conn_read() {
 }
 
 void web::HttpConnect::conn_write() {
-	assert(conn_sender_ != nullptr && conn_sockfd_ >= 0);
+	if(conn_sender_ == nullptr || conn_sockfd_.is_close() || conn_sockfd_.socket() < 0) {
+		logger::log_error << "sender " << conn_sender_.get()
+			<< " sock " << conn_sockfd_.socket();
+		return;
+	}
 	own_event_loop_->closeTimer(timer_id_);
-	int n = conn_sender_->send_file_to_network(conn_sockfd_);
+	int n = conn_sender_->send_file_to_network(conn_sockfd_.socket());
 	if(conn_sender_->finish()) {
 		conn_sender_.reset();
 		return close();
@@ -151,56 +160,25 @@ void web::HttpConnect::conn_write() {
 	}
 }
 
-int web::HttpConnect::receive(char *buffer, int size) {
-	int n = ::recv(conn_sockfd_, buffer, size, 0);
-	if(n == 0) {
-		logger::log_warn << "http_connect " << this << " recv fd " <<
-			conn_channel_->fd() << " return 0";
-		return -1;
-	} else if(n < 0) {
-		if(errno == EINTR || errno == EAGAIN) {
-			logger::log_info << "http_connect " << this << " recv fd " <<
-				conn_channel_->fd() << " get EINTR or EAGAIN";
-			return 0;
-		} else {
-			logger::log_error << "http_connect " << this << " recv fd " <<
-				conn_channel_->fd() << " error " << strerror(errno);
-			return -1;
-		}
-	}
-	return n;
-}
-
-
-void web::HttpConnect::response() {
-	logger::log_info << "Socket: " << conn_sockfd_ << " read";
-	static const char html[1024] = "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n"
-		"<HTML><TITLE>index</TITLE><BODY>"
-		"<h1>this is a test!<h1></BODY></HTML>";
-	static const int len = strlen(html);
-	::write(conn_sockfd_, html, len);
-	close();
-}
-
 void web::HttpConnect::conn_close() {
-	logger::log_info << "Socket: " << conn_sockfd_ << " close";
+	logger::log_info << "Socket: " << conn_sockfd_.socket() << " close";
 	close();
 }
 
 void web::HttpConnect::conn_error() {
-	logger::log_error << "Socket: " << conn_sockfd_ << " error";
+	logger::log_error << "Socket: " << conn_sockfd_.socket() << " error";
 	close();
 }
 
 void web::HttpConnect::conn_timer() {
-	logger::log_warn << "Socket: " << conn_sockfd_ << " timeout";
+	logger::log_warn << "Socket: " << conn_sockfd_.socket() << " timeout";
 	delete this;
 }
 
 void web::HttpConnect::conn_delete() {
 	if(!close_) {
 		close_ = true;
-		logger::log_info << "Socket: " << conn_sockfd_ << " close";
+		logger::log_info << "Socket: " << conn_sockfd_.socket() << " close";
 		delete this;
 	}
 }

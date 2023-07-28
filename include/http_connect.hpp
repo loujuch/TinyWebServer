@@ -6,6 +6,7 @@
 
 #include "timer_id.hpp"
 #include "http_head_parser.hpp"
+#include "socket_connect.hpp"
 
 #include <netinet/in.h>
 
@@ -23,7 +24,7 @@ class WebServer;
 class HttpConnect {
 	int status;
 	bool close_;
-	int conn_sockfd_;
+	SocketConnect conn_sockfd_;
 	WebServer *own_web_server_;
 	HttpHeadParser head_parser_;
 	ev::TimerId timer_id_;
@@ -44,16 +45,17 @@ class HttpConnect {
 	void conn_delete();
 
 	void close();
-	int receive(char *buffer, int size);
-	void response();
 public:
-	HttpConnect(ev::EventLoop *loop, int sock,
+	explicit HttpConnect(ev::EventLoop *loop, SocketConnect &&sock,
 		const sockaddr_in new_addr, WebServer *web);
 	~HttpConnect();
 
 	inline int socket() const {
-		return conn_sockfd_;
+		return conn_sockfd_.socket();
 	}
+
+	HttpConnect(const HttpConnect &) = delete;
+	HttpConnect &operator=(const HttpConnect &) = delete;
 }; // class HttpConnect
 
 } // namespace web

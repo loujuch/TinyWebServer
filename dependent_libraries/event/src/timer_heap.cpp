@@ -6,17 +6,26 @@
 #include <assert.h>
 
 inline int64_t left(std::shared_ptr<ev::Timer> parent_seq) {
-	assert(parent_seq != nullptr);
+	if(parent_seq == nullptr) {
+		logger::log_fatal << "parent_seq == nullptr";
+		return -1;
+	}
 	return ((parent_seq->seq() + 1) << 1) - 1;
 }
 
 inline int64_t right(std::shared_ptr<ev::Timer> parent_seq) {
-	assert(parent_seq != nullptr);
+	if(parent_seq == nullptr) {
+		logger::log_fatal << "parent_seq == nullptr";
+		return -1;
+	}
 	return ((parent_seq->seq() + 1) << 1);
 }
 
 inline int64_t parent(std::shared_ptr<ev::Timer> child) {
-	assert(child != nullptr);
+	if(child == nullptr) {
+		logger::log_fatal << "child == nullptr";
+		return -1;
+	}
 	return ((child->seq() + 1) >> 1) - 1;
 }
 
@@ -53,7 +62,8 @@ ev::TimerId ev::TimerHeap::emplace(const TimerStamp &when,
 	uint64_t interval, TimerCallback timer_callback) {
 	std::shared_ptr<Timer> timer(new Timer(when, interval, timer_callback));
 	logger::log_info << "timer ptr = " << timer.get() << " create";
-	assert(push(timer));
+	bool is = push(timer);
+	assert(is);
 	return TimerId(timer.get());
 }
 
@@ -62,7 +72,8 @@ const std::shared_ptr<ev::Timer> ev::TimerHeap::top() const {
 }
 
 void ev::TimerHeap::pop() {
-	assert(erase(timer_heap_.front().get()));
+	bool is = erase(timer_heap_.front().get());
+	assert(is);
 }
 
 bool ev::TimerHeap::erase(Timer *timer) {

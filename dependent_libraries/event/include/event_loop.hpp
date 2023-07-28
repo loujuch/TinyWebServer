@@ -29,7 +29,7 @@ class EventLoop {
 	std::unique_ptr<SignalSet> signal_set_;
 	std::unordered_set<Channel *> channel_set_;
 public:
-	EventLoop();
+	explicit EventLoop();
 	~EventLoop();
 
 	/**
