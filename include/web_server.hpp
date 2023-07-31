@@ -23,7 +23,7 @@ class WebServer {
 	std::unique_ptr<Accepter> accepter_;
 	HttpConnectPool http_connect_pool_;
 
-	void accept_callback(int sock, const sockaddr_in &addr);
+	bool accept_callback(int sock, const sockaddr_in &addr);
 public:
 	explicit WebServer(uint16_t port, uint32_t max_conn,
 		const std::string &web_root, const std::string &server_name,

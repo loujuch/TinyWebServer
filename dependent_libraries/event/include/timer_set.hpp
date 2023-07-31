@@ -23,7 +23,7 @@ class TimerSet {
 	std::unique_ptr<Channel> timer_channel_;
 	std::unique_ptr<TimerHeap> timer_heap_;
 
-	void exec();
+	bool exec();
 public:
 	explicit TimerSet(EventLoop *event_loop);
 	~TimerSet();

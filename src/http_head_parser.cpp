@@ -2,7 +2,7 @@
 
 #include "log.hpp"
 
-#include <iostream>
+#include <algorithm>
 
 static int get_line(const char *buffer, int len, int start) {
 	if(len <= 0 || start < 0 || buffer == nullptr) {
@@ -27,6 +27,111 @@ web::HttpHeadParser::HttpHeadParser() :
 	line_(0),
 	finish_(false),
 	error_(false) {
+}
+
+int web::HttpHeadParser::parser_range(std::vector<std::pair<off_t, off_t>> &range) {
+	auto p = field_.find("Range");
+	if(p == field_.end()) {
+		return -1;
+	}
+	auto &s = p->second;
+	int n = -1;
+	for(int i = 0;i < s.size();++i) {
+		if(s[i] == '=') {
+			n = i;
+			break;
+		}
+	}
+	if(n == -1) {
+		return 0;
+	}
+	int ks = 0, ke = n - 1, vs = n + 1, ve = s.size() - 1;
+	while(isspace(s[ks]) && ks <= ke) {
+		++ks;
+	}
+	while(isspace(s[ke]) && ks <= ke) {
+		--ke;
+	}
+	while(isspace(s[vs]) && vs <= ve) {
+		++vs;
+	}
+	while(isspace(s[ve]) && vs <= ve) {
+		--ve;
+	}
+	if(ks > ke || vs > ve || s.substr(ks, ke - ks + 1) != "bytes") {
+		error_ = true;
+		return 0;
+	}
+	bool all = false;
+	int status = 0;
+	off_t left = 0, right = 0;
+	range.clear();
+	for(int i = vs;i <= ve;++i) {
+		char c = s[i];
+		if(c == ' ') {
+			continue;
+		}
+		switch(status) {
+			case 0:
+				if(c >= '0' && c <= '9') {
+					all = false;
+					left *= 10;
+					left += c - '0';
+				} else if(c == '-') {
+					all = true;
+					status = 1;
+				} else {
+					error_ = 1;
+					return 0;
+				}
+				break;
+			case 1:
+				if(c >= '0' && c <= '9') {
+					all = false;
+					right *= 10;
+					right += c - '0';
+				} else if(c == ',') {
+					if(left > right) {
+						error_ = -1;
+						return 0;
+					}
+					all = false;
+					range.emplace_back(left, right);
+					left = 0;
+					right = 0;
+					status = 0;
+				} else {
+					error_ = 1;
+					return 0;
+				}
+				break;
+			default:
+				error_ = true;
+				return 0;
+		}
+	}
+	if(all) {
+		range.emplace_back(left, -1);
+	} else if(status == 1) {
+		if(left > right) {
+			error_ = -1;
+			return 0;
+		}
+		range.emplace_back(left, right);
+	} else {
+		error_ = true;
+		return 0;
+	}
+	std::sort(range.begin(), range.end(), [](
+		const std::pair<off_t, off_t> &a,
+		const std::pair<off_t, off_t> &b) {
+			if(a.second == b.second) {
+				return a.second < b.second;
+			}
+			return a.first < b.first;
+		}
+	);
+	return range.size();
 }
 
 void web::HttpHeadParser::commit(const char *buffer, int len) {

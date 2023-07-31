@@ -65,7 +65,7 @@ void ev::EventLoop::delChannel(Channel *channel) {
 		channel_mutex_.unlock();
 		logger::log_warn << "Channel " << channel << " isn't in set";
 	} else {
-		logger::log_warn << "Channel " << channel << " del from set";
+		logger::log_info << "Channel " << channel << " del from set";
 		channel_set_.erase(channel);
 		poller_->delChannel(channel);
 		channel_mutex_.unlock();

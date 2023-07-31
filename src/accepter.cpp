@@ -32,24 +32,26 @@ static int safe_close(int fd) {
 }
 
 
-void web::Accepter::listen_error() {
+bool web::Accepter::listen_error() {
 	logger::log_error << "Listen Socket fd: " << listen_fd_ << " Error " << strerror(errno);
 	assert(false);
+	return false;
 }
 
-void web::Accepter::listen_accept() {
+bool web::Accepter::listen_accept() {
 	struct sockaddr_in client;
 	socklen_t len = sizeof(client);
 	int new_sock = accept4(listen_fd_, (struct sockaddr *)&client, &len,
 		SOCK_NONBLOCK | SOCK_CLOEXEC);
 	if(new_sock < 0) {
 		logger::log_fatal << "Accept error " << strerror(errno);
-		return;
+		return false;
 	}
 	logger::log_info << "new socket " << new_sock;
 	if(accept_callback_) {
-		accept_callback_(new_sock, client);
+		return accept_callback_(new_sock, client);
 	}
+	return true;
 }
 
 web::Accepter::Accepter(uint16_t port) :
@@ -93,5 +95,6 @@ int web::Accepter::run(AcceptCallback callback) {
 	listen_event_loop_->setChannel(listen_channel_.get());
 	listen_event_loop_->setTimeOut(timeout);
 	listen_event_loop_->setFreeCallback(std::bind(&Accepter::free_callback, this));
+	logger::log_info << "Init finish!";
 	return listen_event_loop_->run();
 }

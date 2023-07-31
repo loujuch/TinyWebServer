@@ -17,7 +17,6 @@ class EventLoopThread {
 	ThreadInitCallback init_callback_;
 	std::thread loop_thread_;
 	std::condition_variable cond_;
-	ChannelArgs args_;
 
 	void func();
 public:

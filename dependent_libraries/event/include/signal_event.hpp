@@ -22,7 +22,7 @@ class SignalEvent {
 
 	static std::vector<SignalEvent *> signal_event_;
 	static void call_sig(int sig);
-	void exec();
+	bool exec();
 public:
 	explicit SignalEvent(EventLoop *event_loop, int signo);
 	~SignalEvent();

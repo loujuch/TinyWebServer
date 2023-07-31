@@ -15,7 +15,7 @@ void ev::EventLoopThread::func() {
 	event_loop_ = &event_loop;
 	if(init_callback_) {
 		logger::log_trace << "epoll thread init";
-		init_callback_(event_loop, args_);
+		init_callback_(event_loop);
 	}
 	logger::log_trace << "epoll thread notify run";
 	cond_.notify_one();

@@ -1,5 +1,7 @@
 #include "channel.hpp"
 
+#include <iostream>
+
 #include "event_loop.hpp"
 #include "log.hpp"
 
@@ -24,12 +26,9 @@ ev::Channel::Channel(EventLoop *event_loop, int fd) :
 }
 
 ev::Channel::~Channel() {
-	if(close_) {
-		logger::log_info << "channel " << this << " fd = " << fd_ << ": had close";
-		return;
-	}
 	if(owner_event_loop_ != EventLoop::this_thread_event_loop()) {
-		logger::log_warn << "channel " << this << " fd = " << fd_ << ": this_thread_event_loop has close";
+		logger::log_warn << "channel " << this << " fd = " << fd_
+			<< ": this_thread_event_loop has close";
 		return;
 	}
 	if(owner_event_loop_->hasChannel(this)) {
@@ -41,6 +40,10 @@ ev::Channel::~Channel() {
 }
 
 void ev::Channel::close() {
+	if(close_) {
+		logger::log_info << "channel " << this << " fd = " << fd_ << ": had close";
+		return;
+	}
 	close_ = true;
 	owner_event_loop_->delChannel(this);
 }
@@ -56,16 +59,20 @@ void ev::Channel::exec() {
 	logger::log_info << "channel " << this << " fd = " << fd_ << " has event " << revent;
 
 	if(revent == EV_POOLER_NONE) {
-		logger::log_warn << "channel " << this << " fd = " << fd_ << ": revent == EV_POOLER_NONE";
+		logger::log_warn << "channel " << this << " fd = " << fd_
+			<< ": revent == EV_POOLER_NONE";
 		return;
 	}
 
 	if((revent & EV_POOLER_HUP) && !(revents_ & EV_POOLER_READ)) {
 		logger::log_trace << "channel " << this << " fd = " << fd_ << ": hup";
 		if(close_callback_) {
-			close_callback_();
+			if(!close_callback_()) {
+				return;
+			}
 		} else {
-			logger::log_warn << "channel " << this << " fd = " << fd_ << ": close callback is empty";
+			logger::log_warn << "channel " << this << " fd = " << fd_
+				<< ": close callback is empty";
 		}
 	}
 
@@ -73,34 +80,36 @@ void ev::Channel::exec() {
 		logger::log_trace << "channel " << this << " fd = " << fd_ << ": error";
 		logger::log_error << "channel " << this << " errno = " << errno << ' ' << strerror(errno);
 		if(error_callback_) {
-			error_callback_();
+			if(!error_callback_()) {
+				return;
+			}
 		} else {
-			logger::log_warn << "channel " << this << " fd = " << fd_ << ": error callback is empty";
+			logger::log_warn << "channel " << this << " fd = " << fd_
+				<< ": error callback is empty";
 		}
 	}
 
 	if(revent & (EV_POOLER_READ | EV_POOLER_PRI | EV_POOLER_RDHUP)) {
 		logger::log_trace << "channel " << this << " fd = " << fd_ << ": read";
 		if(read_callback_) {
-			read_callback_();
+			if(!read_callback_()) {
+				return;
+			}
 		} else {
-			logger::log_warn << "channel " << this << " fd = " << fd_ << ": read callback is empty";
+			logger::log_warn << "channel " << this << " fd = " << fd_
+				<< ": read callback is empty";
 		}
 	}
 
 	if(revent & EV_POOLER_WRITE) {
 		logger::log_trace << "channel " << this << " fd = " << fd_ << ": write";
 		if(write_callback_) {
-			write_callback_();
+			if(!write_callback_()) {
+				return;
+			}
 		} else {
-			logger::log_warn << "channel " << this << " fd = " << fd_ << ": write callback is empty";
-		}
-	}
-
-	if(close_) {
-		revents_ = EV_POOLER_NONE;
-		if(delete_callback_) {
-			delete_callback_();
+			logger::log_warn << "channel " << this << " fd = " << fd_
+				<< ": write callback is empty";
 		}
 	}
 }

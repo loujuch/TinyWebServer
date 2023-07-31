@@ -14,11 +14,13 @@
 web::HttpConnectPool::HttpConnectPool(uint32_t thread_number) :
 	now(0),
 	event_loop_thread_set_(thread_number),
+	connect_set_(thread_number),
+	connect_set_mutex_(thread_number),
 	event_loop_set_(thread_number, nullptr) {
 	for(int i = 0;i < thread_number;++i) {
 		logger::log_info << "create thread " << i;
 		event_loop_thread_set_[i].reset(new ev::EventLoopThread([&](
-			ev::EventLoop &loop, ev::ChannelArgs &args) {
+			ev::EventLoop &loop) {
 				loop.setTimeOut(timeout);
 				loop.setFreeCallback([&]() {
 					logger::log_trace << "Pool: " << this << " free "
@@ -36,11 +38,32 @@ web::HttpConnectPool::~HttpConnectPool() {
 }
 
 void web::HttpConnectPool::add_connect(SocketConnect &&new_sock,
-	const sockaddr_in &new_addr, WebServer *web) {
-	int target = now;
+	const sockaddr_in &new_addr) {
+	int target = now, sock = new_sock.socket();
 	now = now + 1 >= event_loop_set_.size() ? 0 : now + 1;
 	HttpConnect *http_connect = new HttpConnect(
-		event_loop_set_[target], std::move(new_sock), new_addr, web);
-	logger::log_info << "socket connect: " << new_sock.socket()
+		event_loop_set_[target], std::move(new_sock), new_addr, this, target);
+	logger::log_info << "socket connect: " << sock
 		<< " create belong " << target << " in " << http_connect;
+	connect_set_mutex_[target].lock();
+	connect_set_[target].emplace(http_connect);
+	connect_set_mutex_[target].unlock();
+	http_connect->exec();
+}
+
+
+void web::HttpConnectPool::del_connect(HttpConnect *http_connect) {
+	int target = http_connect->group();
+	if(target < 0 || target >= connect_set_.size()) {
+		return;
+	}
+	connect_set_mutex_[target].lock();
+	auto p = connect_set_[target].find(http_connect);
+	if(p == connect_set_[target].end()) {
+		connect_set_mutex_[target].unlock();
+		return;
+	}
+	connect_set_[target].erase(p);
+	connect_set_mutex_[target].unlock();
+	delete http_connect;
 }

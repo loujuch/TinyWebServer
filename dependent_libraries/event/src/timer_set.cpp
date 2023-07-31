@@ -73,10 +73,10 @@ ev::TimerSet::~TimerSet() {
 	::close(timer_fd_);
 }
 
-void ev::TimerSet::exec() {
+bool ev::TimerSet::exec() {
 	if(read_timerfd(timer_fd_) == 0) {
 		logger::log_warn << "Read timerfd " << timer_fd_ << " get zero";
-		return;
+		return true;
 	}
 	TimerStamp now_time = TimerStamp::now();
 	std::vector<std::shared_ptr<ev::Timer>> tmp;
@@ -102,6 +102,7 @@ void ev::TimerSet::exec() {
 		logger::log_trace << "timer " << p.get() << " exec";
 		p->exec();
 	}
+	return true;
 }
 
 ev::TimerId ev::TimerSet::addTimer(const TimerStamp &when, uint64_t interval,

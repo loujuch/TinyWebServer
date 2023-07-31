@@ -38,7 +38,7 @@ web::WebServer::~WebServer() {
 	logger::log_close();
 }
 
-void web::WebServer::accept_callback(int sock, const sockaddr_in &addr) {
+bool web::WebServer::accept_callback(int sock, const sockaddr_in &addr) {
 	SocketConnect socket_conn(sock, this);
 	++now_conn_;
 	if(now_conn_ + 1 >= max_conn_) {
@@ -52,8 +52,9 @@ void web::WebServer::accept_callback(int sock, const sockaddr_in &addr) {
 		socket_conn.shut_write();
 		socket_conn.close();
 	} else {
-		http_connect_pool_.add_connect(std::move(socket_conn), addr, this);
+		http_connect_pool_.add_connect(std::move(socket_conn), addr);
 	}
+	return true;
 }
 
 int web::WebServer::run() {

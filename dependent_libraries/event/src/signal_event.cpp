@@ -102,7 +102,7 @@ ev::SignalEvent::~SignalEvent() {
 	logger::log_trace << "unset signo: " << signo_ << " event";
 }
 
-void ev::SignalEvent::exec() {
+bool ev::SignalEvent::exec() {
 	logger::log_trace << "signo: " << signo_ << " exec";
 	read_eventfd(event_fd_);
 	if(callback_) {
@@ -110,4 +110,5 @@ void ev::SignalEvent::exec() {
 	} else {
 		logger::log_warn << "signo: " << signo_ << " callback is empty";
 	}
+	return true;
 }

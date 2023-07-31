@@ -13,7 +13,7 @@ class EventLoop;
 
 namespace web {
 
-using AcceptCallback = std::function<void(int, const sockaddr_in &)>;
+using AcceptCallback = std::function<bool(int, const sockaddr_in &)>;
 
 // 一个服务器中只包含一个，用于响应连接事件
 class Accepter {
@@ -24,8 +24,8 @@ class Accepter {
 	AcceptCallback accept_callback_;
 
 	void free_callback();
-	void listen_error();
-	void listen_accept();
+	bool listen_error();
+	bool listen_accept();
 public:
 	explicit Accepter(uint16_t port);
 	~Accepter();

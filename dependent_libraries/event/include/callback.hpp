@@ -10,20 +10,17 @@ namespace ev {
 class EventLoop;
 class Channel;
 
-using ReadCallback = std::function<void()>;
-using WriteCallback = std::function<void()>;
-using ErrorCallback = std::function<void()>;
-using CloseCallback = std::function<void()>;
-using DeleteCallback = std::function<void()>;
+using ReadCallback = std::function<bool()>;
+using WriteCallback = std::function<bool()>;
+using ErrorCallback = std::function<bool()>;
+using CloseCallback = std::function<bool()>;
 
 using TimerCallback = std::function<void()>;
 using SignalCallback = std::function<void()>;
 
 using FreeCallback = std::function<void()>;
 
-using ChannelArgs = std::vector<std::unique_ptr<Channel>>;
-using ThreadInitCallback = std::function<void(EventLoop &,
-	ChannelArgs &)>;
+using ThreadInitCallback = std::function<void(EventLoop &)>;
 
 } // namespace ev
 

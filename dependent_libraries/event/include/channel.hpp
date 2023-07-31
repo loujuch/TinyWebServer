@@ -18,10 +18,8 @@ class Channel {
 	WriteCallback write_callback_;
 	ErrorCallback error_callback_;
 	CloseCallback close_callback_;
-	DeleteCallback delete_callback_;
 public:
 	explicit Channel(EventLoop *event_loop, int fd);
-	explicit Channel(Channel &&channel);
 	~Channel();
 
 	void exec();
@@ -61,10 +59,6 @@ public:
 	inline void setCloseCallback(CloseCallback callback) {
 		events_ |= EV_POOLER_RDHUP;
 		close_callback_ = callback;
-	}
-
-	inline void setDeleteCallback(DeleteCallback callback) {
-		delete_callback_ = callback;
 	}
 
 	Channel(const Channel &) = delete;

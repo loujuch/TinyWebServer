@@ -3,6 +3,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace web {
 
@@ -22,6 +23,20 @@ public:
 	explicit HttpHeadParser();
 
 	bool parser(const char *buffer, int size);
+
+	int parser_range(std::vector<std::pair<off_t, off_t>> &range);
+
+	inline void clean() {
+		line_ = 0;
+		finish_ = false;
+		error_ = false;
+		method_.clear();
+		query_.clear();
+		file_path_.clear();
+		version_.clear();
+		leave_data_.clear();
+		field_.clear();
+	}
 
 	inline int line() const {
 		return line_;

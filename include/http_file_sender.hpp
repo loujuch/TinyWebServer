@@ -15,11 +15,22 @@ class HttpFileSender {
 	off_t size_;
 	bool can_exec_;
 	bool exist_;
+	std::string last_modified_time_;
 public:
 	explicit HttpFileSender(const std::string &file_name);
 	~HttpFileSender();
 
 	int send_file_to_network(int sock);
+
+	std::string file_path(const std::string &file_name);
+
+	inline const std::string &last_modified_time() const {
+		return last_modified_time_;
+	}
+
+	inline off_t size() const {
+		return size_;
+	}
 
 	inline bool exist() {
 		return exist_;

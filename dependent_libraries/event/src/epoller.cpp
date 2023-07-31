@@ -1,7 +1,5 @@
 #include "epoller.hpp"
 
-#include <iostream>
-
 #include "channel.hpp"
 #include "event.hpp"
 #include "log.hpp"
