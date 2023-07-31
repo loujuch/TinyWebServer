@@ -1,6 +1,8 @@
 #ifndef _SOCKET_CONNECT_HPP__
 #define _SOCKET_CONNECT_HPP__
 
+#include <netinet/in.h>
+
 namespace web {
 
 class WebServer;
@@ -9,8 +11,9 @@ class SocketConnect {
 	WebServer *web_;
 	bool close_, close_write_, close_read_;
 	int sock_;
+	const sockaddr_in remote_addr_;
 public:
-	explicit SocketConnect(int sock, WebServer *web);
+	explicit SocketConnect(int sock, const sockaddr_in &remote_addr, WebServer *web);
 	SocketConnect(SocketConnect &&sock);
 	~SocketConnect();
 
@@ -22,6 +25,10 @@ public:
 	int shut_both();
 
 	int close();
+
+	inline const sockaddr_in &remote_addr() const {
+		return remote_addr_;
+	}
 
 	inline int socket() const {
 		return sock_;

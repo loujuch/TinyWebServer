@@ -39,7 +39,7 @@ web::WebServer::~WebServer() {
 }
 
 bool web::WebServer::accept_callback(int sock, const sockaddr_in &addr) {
-	SocketConnect socket_conn(sock, this);
+	SocketConnect socket_conn(sock, addr, this);
 	++now_conn_;
 	if(now_conn_ + 1 >= max_conn_) {
 		socket_conn.shut_read();

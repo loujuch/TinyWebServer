@@ -15,6 +15,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <arpa/inet.h>
 
 static const std::string &get_response_head(int number) {
 	static const std::vector<std::string> head_str({
@@ -105,7 +106,15 @@ int web::HttpConnect::set_cgi(const std::string &file_name) {
 			env_bar.emplace_back(e.second, head_parser_.field(e.first));
 		}
 	}
+	char ip_buffer[16];
+	env_bar.emplace_back("REMOTE_ADDR", ::inet_ntop(
+		conn_sockfd_.remote_addr().sin_family,
+		&conn_sockfd_.remote_addr().sin_addr,
+		ip_buffer,
+		sizeof(ip_buffer)
+	));
 	env_bar.emplace_back("QUERY_STRING", head_parser_.query());
+	env_bar.emplace_back("SERVER_SOFTWARE", "TinyWebSever/1.0");
 	conn_cgi_.reset(new HttpCGI(file_name, head_parser_.method(), env_bar, own_event_loop_));
 	if(conn_cgi_->error()) {
 		logger::log_error << " cgi can't exec";

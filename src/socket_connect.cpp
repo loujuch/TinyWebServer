@@ -5,11 +5,12 @@
 #include <unistd.h>
 #include <sys/socket.h>
 
-web::SocketConnect::SocketConnect(int sock, WebServer *web) :
+web::SocketConnect::SocketConnect(int sock, const sockaddr_in &remote_addr, WebServer *web) :
 	web_(web),
 	close_(false),
 	close_write_(false),
 	close_read_(false),
+	remote_addr_(remote_addr),
 	sock_(sock) {
 	if(sock_ < 0) {
 		close_ = true;
@@ -23,6 +24,7 @@ web::SocketConnect::SocketConnect(SocketConnect &&sock) :
 	close_(sock.close_),
 	close_write_(sock.close_write_),
 	close_read_(sock.close_read_),
+	remote_addr_(sock.remote_addr_),
 	sock_(sock.sock_) {
 	sock.web_ = nullptr;
 	sock.close_ = true;
